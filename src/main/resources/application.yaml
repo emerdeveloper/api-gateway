@@ -1,0 +1,48 @@
+
+
+server:
+  port: 8081
+
+paths.auth:
+  basePath: http://localhost:3000
+  introspect: /api/auth/introspect
+
+
+spring:
+  main:
+    web-application-type: REACTIVE
+  application:
+    name: spring-cloud-gateway
+  cloud:
+    gateway:
+      httpclient:
+        connect-timeout: 20000    # socket connection timeout
+        pool:
+          max-connections: 1500   # max allowed active connections
+          type: FIXED             # fixed pool of max connections
+          metrics: true           # routing httpclient metrics
+      routes:
+        - id: prueba
+          uri: http://httpbin.org
+          predicates:
+            - Path=/edge-service/v1/httpbin
+            - Header=scope, httpbin
+          filters:
+            - name: AuthenticationFilter
+            - RewritePath=/edge-service/v1/httpbin, /get
+
+management:
+  endpoint:
+    gateway:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: 'gateway'
+
+
+logging:
+  level:
+    web: DEBUG
+    org.springframework.cloud.gateway.route.RouteDefinitionRouteLocator: DEBUG
+
