@@ -90,6 +90,6 @@ public class AuthorizationByIntrospection implements IAuthorizationByIntrospecti
     }
 
     private String getAuthHeader(ServerHttpRequest request) {
-        return request.getHeaders().getOrEmpty("Authorization").get(0);
+        return request.getHeaders().getOrEmpty(Constants.HTTP_AUTHORIZATION).get(0);
     }
 }

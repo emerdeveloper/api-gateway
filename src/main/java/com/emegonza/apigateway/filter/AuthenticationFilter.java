@@ -2,11 +2,10 @@ package com.emegonza.apigateway.filter;
 
 import com.emegonza.apigateway.model.ErrorData;
 import com.emegonza.apigateway.util.BussinessException;
-import com.emegonza.apigateway.model.IntrospectUserResponse;
 import com.emegonza.apigateway.model.TransactionData;
 import com.emegonza.apigateway.service.IAuthorizationByIntrospection;
 import com.emegonza.apigateway.util.Constants;
-import com.fasterxml.jackson.databind.JsonNode;
+import com.emegonza.apigateway.util.UpdateDataRequest;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
@@ -33,21 +32,23 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 
 @Slf4j
-//@RefreshScope
 @Component
 public class AuthenticationFilter extends AbstractGatewayFilterFactory<AuthenticationFilter.Config> {
 
     private final IAuthorizationByIntrospection authorizationByIntrospection;
+    private final UpdateDataRequest updateDataRequest;
 
-    public AuthenticationFilter(IAuthorizationByIntrospection authorizationByIntrospection) {
+    public AuthenticationFilter(IAuthorizationByIntrospection authorizationByIntrospection,
+                                UpdateDataRequest updateDataRequest) {
         super(Config.class);
         this.authorizationByIntrospection = authorizationByIntrospection;
+        this.updateDataRequest = updateDataRequest;
     }
 
     @Override
     public GatewayFilter apply(Config config) {
         return (exchange, chain) -> {
-           // log.info("Ejecutando filtro pre");
+           log.info("Ejecutando filtro pre");
             ServerHttpRequest request = exchange.getRequest().mutate().build();
             if (isAuthMissing(request)) {
                 return this.onError(exchange, Constants.MSG_ERROR_GET_AUTHORIZATION);
@@ -59,7 +60,7 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                             return this.onError(exchange, Constants.MSG_ERROR_TOKEN_INVALID);
                         }
 
-                        var updatedRequest = updateRequest(exchange, request, introspectUserResponse);
+                        var updatedRequest = updateDataRequest.updateRequest(config, exchange, request, introspectUserResponse);
                         return chain.filter(updatedRequest);
 
                     })
@@ -74,24 +75,13 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
         };
     }
 
-    private ServerWebExchange updateRequest(ServerWebExchange exchange,
-                                            ServerHttpRequest request,
-                                            IntrospectUserResponse introspectResponse) {
-
-        request.mutate()
-                .header("email", introspectResponse.getEmail())
-                .header("document-number", introspectResponse.getDocumentNumber())
-                .build();
-        return exchange.mutate().request(request).build();
-    }
-
     private boolean isAuthMissing(ServerHttpRequest request) {
         return !request.getHeaders().containsKey(Constants.HTTP_AUTHORIZATION);
     }
 
     private Mono<Void> onError(ServerWebExchange exchange, String message) {
         ServerHttpResponse response = exchange.getResponse();
-        String error = buildJsonError(exchange.getRequest(), null, message);
+        String error = buildJsonError(exchange.getRequest(), message);
         byte[] bytes = error.getBytes(StandardCharsets.UTF_8);
         DataBuffer buffer = exchange.getResponse().bufferFactory().wrap(bytes);
         response.getHeaders().add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
@@ -99,7 +89,7 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
         return exchange.getResponse().writeWith(Flux.just(buffer));
     }
 
-    private String buildJsonError(ServerHttpRequest request, AuthenticationFilter.Config config, String message) {
+    private String buildJsonError(ServerHttpRequest request, String message) {
         return new Gson().toJson(
                 ErrorData.builder()
                         .errors(Collections.singletonList(
@@ -117,6 +107,5 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
     @Data
     public static class Config {
         private TransactionData transactionData;
-        private JsonNode jsonNodeRequest;
     }
 }

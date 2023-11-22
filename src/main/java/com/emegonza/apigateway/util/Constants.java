@@ -4,6 +4,11 @@ public class Constants {
     public static final String HTTP_AUTHORIZATION = "Authorization";
     public static final String BODY_TOKEN = "token";
     public static final String ENCODE_BEARER = "Bearer";
+    public static final String HTTP_REQUEST_HEADER = "X-Forwarded-For";
+    public static final String PATH_TRANSACTION_ID = "id";
+    public static final String PATH_HEADER = "header";
+    public static final String HTTP_CHUNKED = "chunked";
+    public static final String PATH_DATA = "data";
     public static final String MSG_ERROR_GENERIC =
             "Lo sentimos, tenemos inconvenientes con nuestros sistemas, " +
                     "nuestro equipo se encuentra trabajando para brindarte" +
